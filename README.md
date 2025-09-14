@@ -1,11 +1,11 @@
 # Introduction
 
-`raw-device` is Node module to remotely control devices using LAN/TCP or RS-232/serial connections.
+`raw-device` is Node module to remotely control devices using LAN/TCP, LAN/UDP or RS-232/serial connections.
 The device control protocal must be based on sending and receiving sequence of bytes/ASCII characters in request-response schema which is a common for communication protocols.  
 A base object `RAW` is thought to be a prototype for other, more specific communication objects, but can also be used as stand-alone, full-functional object for simple scenarios.
 
 ## Main features
-- different connection modes: tcp/serial/stream
+- different connection modes: tcp/udp/serial/stream
 - different schemas of connect-disconnect cycle
 - requests queuing and timing management
 - events driven
@@ -20,23 +20,29 @@ const dev1 = new RAW({host: '192.168.4.31', port: 9761});
 dev1.emitter.on('responseFromDevice', data => console.log(data));
 dev1.process('some_command_str\n');
 
+//send-receive data for UDP socket device
+const dev1 = new RAW({host: '192.168.4.31', port: 9761, mode: 'udp'});
+dev1.emitter.on('responseFromDevice', data => console.log(data));
+dev1.process('some_command_str\n');
+
 //send data for Serial device
 const dev2 = new RAW({path: 'com2'});
 dev2.process('00x00x00x00x14x60', '3Bx78x5D');
 ```
 
 # RAW Object
-The primary exported object is `RAW`, which you'll use directly to communicate with serial or tcp devices or use as prototype for you own objects. This section covers direct use.
+The primary exported object is `RAW`, which you'll use directly to communicate with serial, tcp or udp devices or use as prototype for you own objects. This section covers direct use.
 ## Constructor `new RAW(AddressObject, OptionsObject)`
-- `AddressObject <Object>` - required. Use only properties associated with the desired mode (serial, tcp, stream)
-    - `name <string>` - default: 'RAWdevice'  
+- `AddressObject <Object>` - required. Use only properties associated with the desired mode (serial, tcp, udp, stream)
+    - `name <string>` - default: 'RAWdevice'
+    - `mode <string>` - default: auto-detects between tcp and serial based on other arguments  
     //for serial
     - `path <string>` - required. Use valid serial path available in system.
     - `baudRate <number>` - default 9600
     - `dataBits <number>` - default 8
     - `parity <string>` - default 'none'
     - `stopBits <number>` - default 1  
-    //for tcp
+    //for tcp or udp
     - `host <string>` - required. Use valid IP address
     - `port <number>` - default 23   
     //for stream

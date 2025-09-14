@@ -9,7 +9,7 @@ RAW.prototype.addressDefaults = {
     dataBits:8,
     parity: 'none',
     stopBits: 1,
-    //for tcp
+    //for TCP or UDP
     port: 23
 }
 
@@ -41,7 +41,9 @@ function RAW(address, options={}){
     this.addressStr;
     this.mode = this.address.mode;//host and path can't exist together!
     this.name = this.address.name;
-    if(this.address.host)
+    if(this.address.host && this.address.mode == 'udp')
+        this.mode = 'udp';
+    else if(this.address.host)
         this.mode = 'tcp';
     else if(this.address.path)
         this.mode = 'serial';
@@ -108,6 +110,32 @@ function RAW(address, options={}){
             if(parseInt(this.options.disconnect))
                 this.socket.setTimeout(this.options.disconnect, () => this.close());
             break;
+        case 'udp':
+            this.addressStr = `${this.address.host}:${this.address.port}`;
+            const dgram = require('node:dgram');
+            this.socket = dgram.createSocket('udp4');
+//            if(this.options.encoding)
+//                this.socket.setEncoding(this.options.encoding);
+//            this.socket.pipe(this.splitter);
+//            if(this.devStream)
+//                this.socket.pipe(this.devStream);
+//            if(this.talkStream)
+//                this.socket.pipe(this.talkStream);
+//            this.socket.on('data', data => {
+//                this.emitter.emit('connectionData', {dev/* obsolete */: this.name, name: this.name, address: this.addressStr, data: data})
+//            });
+//            this.socket.on('connect', () => {
+//                this.emitter.emit('connectionStatus', {dev/* obsolete */: this.name, name: this.name, address: this.addressStr, status: 'connected'})
+//            });
+//            this.socket.on('error', (error) => {
+//                this.emitter.emit('connectionStatus', {dev/* obsolete */: this.name, name: this.name, address: this.addressStr, status: 'error', more: error})
+//            });
+//            this.socket.on('close', () => {
+//                this.emitter.emit('connectionStatus', {dev/* obsolete */: this.name, name: this.name, address: this.addressStr, status: 'closed'})
+//            });
+//            if(parseInt(this.options.disconnect))
+//                this.socket.setTimeout(this.options.disconnect, () => this.close());
+            break;
         case 'serial':
             this.addressStr = `${this.address.path}:${this.address.baudRate},${this.address.dataBits},${this.address.parity},${this.address.stopBits}`;
             const { SerialPort } = require('serialport');
@@ -153,6 +181,11 @@ function RAW(address, options={}){
             this.socket.connect(this.address);
             //chyba tu też trzeba settimeout
     }
+    else if(this.mode == 'udp'){
+//        if(this.socket.readyState === 'closed' || this.socket.pending)
+//            this.socket.connect(this.address.port, this.address.host);
+            //TODO: Is it necessary to settimeout here too?
+    }
     else if(this.mode == 'serial'){
         if(!this.port.isOpen)
             this.port.open();
@@ -166,6 +199,10 @@ function RAW(address, options={}){
     if(this.mode == 'tcp'){
         if(this.socket.readyState === 'open')
             this.socket.destroy();
+    }
+    else if(this.mode == 'udp'){
+//        if(this.socket.readyState === 'open')
+            this.socket.close();
     }
     else if(this.mode == 'serial')
         if(this.port.isOpen)
@@ -206,6 +243,13 @@ RAW.prototype.dequeue = function(){
             switch(this.mode){
                 case 'tcp':
                     this.socket.write(cmdo.encoded, () => {
+                        this.emitter.emit('commandForDevice', cmdo);
+                        if(this.talkStream)
+                            this.talkStream.write(cmdo.encoded);
+                    });
+                    break;
+                case 'udp':
+                    this.socket.send(cmdo.encoded, this.address.port, this.address.host, () => {
                         this.emitter.emit('commandForDevice', cmdo);
                         if(this.talkStream)
                             this.talkStream.write(cmdo.encoded);

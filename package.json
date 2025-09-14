@@ -1,6 +1,6 @@
 {
     "name": "raw-device",
-    "description": "A module to remotely control devices using LAN-TCP or RS232-serial connections",
+    "description": "A module to remotely control devices using LAN-TCP, LAN-UDP or RS232-serial connections",
     "main": "raw.js",
     "version": "1.1.1",
     "author": {
